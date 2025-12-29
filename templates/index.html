@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rupeek Compliance Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #ff8000ff;
+            --primary-glow: rgba(255, 122, 0, 0.2);
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background-color: #f8fafc;
+            background-image:
+                radial-gradient(at 100% 100%, rgba(13, 148, 136, 0.05) 0px, transparent 50%),
+                url("https://www.transparenttextures.com/patterns/cubes.png");
+            min-height: 100vh;
+            color: var(--text-main);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: -200px;
+            left: -200px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255, 122, 0, 0.3) 0%, rgba(255, 122, 0, 0) 70%);
+            filter: blur(80px);
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 34px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(90deg, #ff7a00, #ffb800);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+        }
+
+        .progress-container { margin-top: 20px; }
+
+        .progress-track {
+            background: #e2e8f0;
+            height: 12px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff7a00, #ffb800);
+            transition: width 0.3s ease;
+        }
+
+        #pdfInput {
+            width: 100%;
+            padding: 50px 20px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.4);
+            box-sizing: border-box;
+        }
+
+        .btn {
+            padding: 16px 36px;
+            font-weight: 700;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #1e293b;
+            color: white;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        #resultsSection {
+            border-left: 6px solid #10b981;
+            background: #f0fdf4;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .btn-download {
+            text-decoration: none;
+            text-align: center;
+            color: white;
+            border-radius: 12px;
+            padding: 15px;
+            font-weight: 600;
+        }
+
+        /* --- POPUP STYLES --- */
+        .popup-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .popup-content {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: popupScale 0.3s ease-out;
+        }
+        @keyframes popupScale {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .btn-close-popup {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-header">
+        <div>
+            <h1>Rupeek Compliance Engine</h1>
+            <p style="color:var(--text-sub); margin-top:5px;">AI-Driven Compliance Verification Layer.</p>
+        </div>
+        <img src="/static/logo.png" alt="Logo" style="height: 60px;">
+    </div>
+
+    <div class="section">
+        <div style="font-weight:700; margin-bottom:15px;">📄 UPLOAD LOAN DOCUMENT</div>
+        <input type="file" id="pdfInput" accept="application/pdf">
+
+        <div style="margin-top:12px; font-size:13px; color:var(--text-sub); display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="loanConfirmCheckbox">
+            <label for="loanConfirmCheckbox">
+                I confirm this document is a <strong>Loan Application</strong>
+            </label>
+        </div>
+
+        <div id="uploadProgress" class="progress-container" style="display:none;">
+            <div style="display:flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="font-size:12px; font-weight:700; color:var(--text-main);">UPLOADING TO SERVER...</span>
+                <span id="progressText" style="font-size:12px;font-weight:800;color:var(--primary);">0%</span>
+            </div>
+            <div class="progress-track">
+                <div id="progressBar" class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div style="font-weight:700; margin-bottom:15px;">⚙️ ADDITIONAL INSTRUCTIONS (OPTIONAL)</div>
+        <textarea id="extraPrompt" style="width:100%;padding:15px;border-radius:10px;border:1px solid #cbd5e1;box-sizing:border-box;" placeholder="e.g. Check specifically for interest rate mismatches..."></textarea>
+    </div>
+
+    <div class="actions">
+        <button id="runAuditBtn" class="btn btn-primary" disabled>Start Audit Engine</button>
+
+        <div id="auditProgressContainer" class="progress-container" style="display:none; margin-top: 30px;">
+            <div style="display:flex;justify-content:space-between; margin-bottom: 5px;">
+                <span id="auditStatusText" style="font-size:12px; font-weight:700;">AI ANALYZING DOCUMENT...</span>
+                <span id="auditPercentText" style="font-size:12px; font-weight:800; color:var(--primary);">0%</span>
+            </div>
+            <div class="progress-track">
+                <div id="auditProgressBar" class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultsSection" class="section" style="display:none; margin-top: 30px;">
+        <div style="font-weight:700;color:#059669;">✅ AUDIT COMPLETE</div>
+        <div class="results-grid">
+            <a id="downloadPdfBtn" class="btn-download" style="background:#ef4444;">Download PDF Report</a>
+            <a id="downloadExcelBtn" class="btn-download" style="background:#10b981;">Download Excel Data</a>
+        </div>
+    </div>
+
+    <div id="jobHistorySection" class="section" style="display:none;">
+        <div style="font-weight:700;margin-bottom:10px;">📜 Job History</div>
+        <div id="jobHistoryList"></div>
+    </div>
+</div>
+
+<div id="statusPopup" class="popup-overlay">
+    <div class="popup-content">
+        <div style="font-size: 40px; margin-bottom: 15px;">⏳</div>
+        <p style="font-size: 16px; line-height: 1.6; color: var(--text-main);">
+            Your AI assistant is working on the document.<br>
+            You can safely come back after <strong>10 minutes</strong>
+        </p>
+        <button class="btn-close-popup" onclick="closePopup()">I'll check back later</button>
+    </div>
+</div>
+
+<script>
+let runId = null;
+const runAuditBtn = document.getElementById("runAuditBtn");
+const statusPopup = document.getElementById("statusPopup");
+const uploadProgress = document.getElementById("uploadProgress");
+const progressBar = document.getElementById("progressBar");
+const progressText = document.getElementById("progressText");
+
+const auditProgressContainer = document.getElementById("auditProgressContainer");
+const auditProgressBar = document.getElementById("auditProgressBar");
+const auditPercentText = document.getElementById("auditPercentText");
+
+function closePopup() {
+    statusPopup.style.display = "none";
+}
+
+document.getElementById("loanConfirmCheckbox").addEventListener("change", e => {
+    runAuditBtn.disabled = !e.target.checked;
+});
+
+// --- LOGIC FOR PROGRESS BAR 1 (UPLOAD) ---
+document.getElementById("pdfInput").addEventListener("change", e => {
+    if (!e.target.files[0]) return;
+    
+    uploadProgress.style.display = "block";
+    const formData = new FormData();
+    formData.append("pdf", e.target.files[0]);
+
+    const xhr = new XMLHttpRequest();
+    
+    // Listen to upload progress
+    xhr.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            progressBar.style.width = percent + "%";
+            progressText.innerText = percent + "%";
+        }
+    });
+
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+            if (xhr.status === 200) {
+                const response = JSON.parse(xhr.responseText);
+                runId = response.run_id;
+                console.log("Upload complete. Run ID:", runId);
+            } else {
+                alert("Upload failed.");
+            }
+        }
+    };
+
+    xhr.open("POST", "/upload", true);
+    xhr.send(formData);
+});
+
+// --- LOGIC FOR PROGRESS BAR 2 (BACKEND) ---
+function pollStatus(id) {
+    let currentSimulatedPercent = 0;
+    
+    // Start an interval to "fake" progress while waiting for backend
+    // This keeps the user engaged
+    const simulationInterval = setInterval(() => {
+        if (currentSimulatedPercent < 90) {
+            currentSimulatedPercent += Math.random() * 2;
+            updateAuditUI(currentSimulatedPercent);
+        }
+    }, 1000);
+
+    const poller = setInterval(() => {
+        fetch(`/status/${id}`)
+            .then(r => r.json())
+            .then(d => {
+                if (d.status === "completed") {
+                    clearInterval(poller);
+                    clearInterval(simulationInterval);
+                    
+                    // Snap to 100%
+                    updateAuditUI(100);
+                    
+                    document.getElementById("downloadPdfBtn").href = d.pdf;
+                    document.getElementById("downloadExcelBtn").href = d.excel;
+                    addToHistory(id, d.pdf, d.excel);
+                    document.getElementById("resultsSection").style.display = "block";
+                    document.getElementById("auditStatusText").innerText = "AUDIT COMPLETE";
+                }
+            });
+    }, 3000);
+}
+
+function updateAuditUI(percent) {
+    const p = Math.min(Math.round(percent), 100);
+    auditProgressBar.style.width = p + "%";
+    auditPercentText.innerText = p + "%";
+}
+
+document.getElementById("runAuditBtn").onclick = () => {
+    if (!runId) {
+        alert("Please wait for the PDF to finish uploading first.");
+        return;
+    }
+    
+    // Show UI elements
+    statusPopup.style.display = "flex";
+    auditProgressContainer.style.display = "block";
+    
+    // Trigger the audit
+    fetch(`/run-audit/${runId}`, { method: "POST" });
+    pollStatus(runId);
+};
+
+function addToHistory(id, pdf, excel) {
+    const div = document.createElement("div");
+    div.innerHTML = `
+        <div style="margin-top:10px;"><b>Job: ${id}</b></div>
+        <div style="margin-top:5px;">
+            <a href="${pdf}" target="_blank" style="color:#ef4444; text-decoration:none; font-weight:600;">PDF</a> | 
+            <a href="${excel}" target="_blank" style="color:#10b981; text-decoration:none; font-weight:600;">Excel</a>
+            <button onclick="retryRun('${id}')" style="margin-left:10px; cursor:pointer; background:none; border:1px solid #ccc; border-radius:4px; font-size:11px;">Retry</button>
+        </div>
+        <hr style="border:0; border-top:1px solid #eee; margin-top:10px;">`;
+    document.getElementById("jobHistoryList").prepend(div);
+    document.getElementById("jobHistorySection").style.display = "block";
+}
+
+function retryRun(id) {
+    auditProgressContainer.style.display = "block";
+    updateAuditUI(0);
+    fetch(`/run-audit/${id}`, { method: "POST" });
+    pollStatus(id);
+}
+</script>
+
+</body>
+</html>
