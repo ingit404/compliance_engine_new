@@ -82,7 +82,7 @@ def run_audit(run_id):
             gl = f"/tmp/{run_id}_gl.pdf"
 
             bucket.blob(f"{REFERENCE_PREFIX}/RBI-KFS.pdf").download_to_filename(gt)
-            bucket.blob(f"{REFERENCE_PREFIX}/CLM.pdf").download_to_filename(clm)
+            bucket.blob(f"{REFERENCE_PREFIX}/CLM Guidelines1.pdf").download_to_filename(clm)
             bucket.blob(f"{REFERENCE_PREFIX}/New-Gold-Loan-Regulations1.pdf").download_to_filename(gl)
 
             output_excel = f"/tmp/{run_id}.xlsx"
