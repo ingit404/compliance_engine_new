@@ -320,9 +320,7 @@ document.getElementById("pdfInput").addEventListener("change", e => {
 // --- LOGIC FOR PROGRESS BAR 2 (BACKEND) ---
 function pollStatus(id) {
     let currentSimulatedPercent = 0;
-    
-    // Start an interval to "fake" progress while waiting for backend
-    // This keeps the user engaged
+
     const simulationInterval = setInterval(() => {
         if (currentSimulatedPercent < 90) {
             currentSimulatedPercent += Math.random() * 2;
@@ -334,18 +332,37 @@ function pollStatus(id) {
         fetch(`/status/${id}`)
             .then(r => r.json())
             .then(d => {
+
+                // ❌ NOT A LOAN DOCUMENT
+                if (d.status === "not_loan") {
+                    clearInterval(poller);
+                    clearInterval(simulationInterval);
+
+                    document.getElementById("auditStatusText").innerText =
+                        "❌ NOT A LOAN DOCUMENT";
+
+                    alert("❌ This document is not a loan document.\nPlease upload a valid loan file.");
+
+                    auditProgressContainer.style.display = "none";
+                    statusPopup.style.display = "none";
+                    return;
+                }
+
+                // ✅ COMPLETED SUCCESSFULLY
                 if (d.status === "completed") {
                     clearInterval(poller);
                     clearInterval(simulationInterval);
-                    
-                    // Snap to 100%
+
                     updateAuditUI(100);
-                    
+
                     document.getElementById("downloadPdfBtn").href = d.pdf;
                     document.getElementById("downloadExcelBtn").href = d.excel;
+
                     addToHistory(id, d.pdf, d.excel);
                     document.getElementById("resultsSection").style.display = "block";
                     document.getElementById("auditStatusText").innerText = "AUDIT COMPLETE";
+
+                    return;
                 }
             });
     }, 3000);

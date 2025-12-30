@@ -153,7 +153,7 @@ def silence_mupdf():
         sys.stderr = old_stderr
 
 
-def normalize_token(t: str) -> str:
+def normalize_token(t):
     if not t:
         return ""
     return (
@@ -215,7 +215,7 @@ def highlight_pdf(
         for item in data:
             try:
                 page_no = int(item["page_number"]) - 1
-                phrase = item["word/phrase_highlighted"].strip()
+                phrase = (item.get("word/phrase_highlighted") or "").strip()
                 note = item.get("whats_wrong", "").strip()
                 priority = item.get("priority","").strip()
             except Exception:

@@ -2,9 +2,14 @@ import os
 import json
 import uuid
 import threading
+import tempfile
 from flask import Flask, request, jsonify, render_template
 from google.cloud import storage
 from auditengine_new import run_llm_audit, highlight_pdf
+
+# =============================
+# CONFIG
+# =============================
 
 BUCKET_NAME = "rupeek_compliance_engine"
 UPLOAD_PREFIX = "uploads"
@@ -16,7 +21,9 @@ app = Flask(__name__)
 storage_client = storage.Client()
 bucket = storage_client.bucket(BUCKET_NAME)
 
-#HELPERS
+# =============================
+# HELPERS
+# =============================
 
 def save_status(run_id, status, extra=None):
     data = {"status": status}
@@ -41,11 +48,13 @@ def generate_signed_url(path):
     return bucket.blob(path).generate_signed_url(expiration=3600)
 
 
+# =============================
+# ROUTES
+# =============================
 
 @app.route("/")
 def index():
     return render_template("index.html")
-
 
 
 @app.route("/upload", methods=["POST"])
@@ -55,7 +64,8 @@ def upload():
         return jsonify({"error": "Only PDF files allowed"}), 400
 
     run_id = str(uuid.uuid4())
-    local_path = f"/tmp/{run_id}.pdf"
+    tmp = tempfile.gettempdir()
+    local_path = os.path.join(tmp, f"{run_id}.pdf")
 
     file.save(local_path)
     upload_to_gcs(local_path, f"{UPLOAD_PREFIX}/{run_id}.pdf")
@@ -64,31 +74,42 @@ def upload():
     return jsonify({"run_id": run_id})
 
 
-
 @app.route("/run-audit/<run_id>", methods=["POST"])
 def run_audit(run_id):
 
     def process():
         try:
+            print("✅PROCESS STARTED:", run_id)
             save_status(run_id, "processing")
+            tmp = tempfile.gettempdir()
 
+            # ------------------------
             # Download uploaded PDF
-            input_pdf = f"/tmp/{run_id}.pdf"
-            bucket.blob(f"{UPLOAD_PREFIX}/{run_id}.pdf").download_to_filename(input_pdf)
+            # ------------------------
+            input_pdf = os.path.join(tmp, f"{run_id}.pdf")
+            print("✅ Downloading input PDF")
+            bucket.blob(f"{UPLOAD_PREFIX}/{run_id}.pdf") \
+                .download_to_filename(input_pdf)
 
-            # Download reference files
-            gt = f"/tmp/{run_id}_gt.pdf"
-            clm = f"/tmp/{run_id}_clm.pdf"
-            gl = f"/tmp/{run_id}_gl.pdf"
+            # ------------------------
+            # Download reference docs
+            # ------------------------
+            gt = os.path.join(tmp, f"{run_id}_gt.pdf")
+            clm = os.path.join(tmp, f"{run_id}_clm.pdf")
+            gl = os.path.join(tmp, f"{run_id}_gl.pdf")
 
+            print("✅Downloading reference files")
             bucket.blob(f"{REFERENCE_PREFIX}/RBI-KFS.pdf").download_to_filename(gt)
             bucket.blob(f"{REFERENCE_PREFIX}/CLM Guidelines1.pdf").download_to_filename(clm)
             bucket.blob(f"{REFERENCE_PREFIX}/New-Gold-Loan-Regulations1.pdf").download_to_filename(gl)
 
-            output_excel = f"/tmp/{run_id}.xlsx"
-            output_pdf = f"/tmp/{run_id}.pdf"
+            output_pdf = os.path.join(tmp, f"{run_id}_annotated.pdf")
+            output_excel = os.path.join(tmp, f"{run_id}.xlsx")
 
+            # ------------------------
             # Run audit
+            # ------------------------
+            print("✅Calling LLM")
             results = run_llm_audit(
                 ground_truth=gt,
                 clm=clm,
@@ -97,11 +118,27 @@ def run_audit(run_id):
                 user_prompt="",
                 output_excel_path=output_excel
             )
+            print("✅ LLM returned")
 
-            # Highlight PDF
+            # ================================
+            # CASE 1: NOT A LOAN DOCUMENT
+            # ================================
+            if (
+                isinstance(results, list)
+                and len(results) == 1
+                and results[0].get("whats_wrong") == "Not a loan document"
+            ):
+                save_status(run_id, "not_loan", {
+                    "message": "This is not a loan document"
+                })
+                return
+
+            # ================================
+            # CASE 2: VALID LOAN DOCUMENT
+            # ================================
+            print("✅ Highlighting PDF")
             highlight_pdf(input_pdf, output_pdf, results)
-
-            # Upload outputs
+            print("☁️ Uploading results")
             upload_to_gcs(output_pdf, f"{OUTPUT_PREFIX}/{run_id}.pdf")
             upload_to_gcs(output_excel, f"{OUTPUT_PREFIX}/{run_id}.xlsx")
 
@@ -110,12 +147,14 @@ def run_audit(run_id):
                 "excel": f"{OUTPUT_PREFIX}/{run_id}.xlsx"
             })
 
+            print("✅ PROCESS COMPLETED")
+
         except Exception as e:
+            print("✅PROCESS CRASHED:", str(e))
             save_status(run_id, "failed", {"error": str(e)})
 
     threading.Thread(target=process).start()
     return jsonify({"status": "started"})
-
 
 
 @app.route("/status/<run_id>")
@@ -123,6 +162,12 @@ def status(run_id):
     data = get_status(run_id)
     if not data:
         return jsonify({"error": "Invalid run ID"}), 404
+
+    if data["status"] == "not_loan":
+        return jsonify({
+            "status": "not_loan",
+            "message": data.get("message", "Not a loan document")
+        })
 
     if data["status"] == "completed":
         return jsonify({
@@ -132,7 +177,6 @@ def status(run_id):
         })
 
     return jsonify(data)
-
 
 
 if __name__ == "__main__":
