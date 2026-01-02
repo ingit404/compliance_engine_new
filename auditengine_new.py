@@ -26,19 +26,16 @@ def validate_document(pdf_path: str) -> None:
 
     text = text.lower()
 
-    required_keywords = ["loan", "interest", "borrower","PAN","AADHAAR","Customer Name",
-        "tenure", "repayment", "lender", "apr",'penalty','gold loan',
-        'loan id']
+    required_keywords = ["loan", "interest", "borrower", "pan", "aadhaar","customer name", "tenure", "repayment","lender", "apr", "penalty", "gold loan", "loan id"]
 
     matches = sum(1 for k in required_keywords if k in text)
 
-    if matches==8:
+    if  matches < 6:
         raise ValueError("Not a loan document")
 
 
 def build_final_prompt(user_instructions: str = "") -> str:
-    """
-    Safely appends optional user instructions to the base audit prompt.
+    """appends optional user instructions to the base audit prompt.
     """
     if user_instructions:
         return (
