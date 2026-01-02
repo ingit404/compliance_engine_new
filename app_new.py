@@ -9,9 +9,6 @@ from flask import Flask, request, jsonify, render_template, send_file
 from google.cloud import storage
 from auditengine_new import run_llm_audit, highlight_pdf
 
-# =============================
-# CONFIG
-# =============================
 
 BUCKET_NAME = "rupeek_compliance_engine"
 UPLOAD_PREFIX = "uploads"
@@ -23,9 +20,7 @@ app = Flask(__name__)
 storage_client = storage.Client()
 bucket = storage_client.bucket(BUCKET_NAME)
 
-# =============================
-# HELPERS
-# =============================
+
 
 def save_status(run_id, status, extra=None):
     data = {"status": status}
@@ -47,9 +42,6 @@ def upload_to_gcs(local_path, gcs_path):
     bucket.blob(gcs_path).upload_from_filename(local_path)
 
 
-# =============================
-# ROUTES
-# =============================
 
 @app.route("/")
 def index():
