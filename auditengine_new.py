@@ -32,7 +32,7 @@ def validate_document(pdf_path: str) -> None:
 
     matches = sum(1 for k in required_keywords if k in text)
 
-    if matches < 3:
+    if matches==8:
         raise ValueError("Not a loan document")
 
 
