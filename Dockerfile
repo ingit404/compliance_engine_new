@@ -45,5 +45,5 @@ COPY . .
 
 EXPOSE 8080
 
-CMD ["gunicorn", "app_new:app", "--workers=4", "--threads=2", "--bind=0.0.0.0:8080"]
+CMD ["gunicorn", "app_new:app", "--workers=1", "--threads=2", "--bind=0.0.0.0:8080"]
 
