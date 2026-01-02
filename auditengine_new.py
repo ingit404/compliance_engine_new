@@ -7,12 +7,13 @@ from typing import List,Dict
 from contextlib import contextmanager
 from google import genai
 from google.genai import types
-from prompts import prompt1
+from prompt import SYSTEM_PROMPT
 from dotenv import load_dotenv
+
 load_dotenv()
 
-
 #the helper fucktions
+
 def validate_document(pdf_path: str) -> None:
     doc = fitz.open(pdf_path)
 
@@ -20,15 +21,14 @@ def validate_document(pdf_path: str) -> None:
         raise ValueError("Empty document")
 
     text = ""
-    for page in doc[:3]:
+    for page in doc[:9]:
         text += page.get_text()
 
     text = text.lower()
 
-    required_keywords = [
-        "loan", "interest", "borrower",
-        "tenure", "repayment", "lender", "apr"
-    ]
+    required_keywords = ["loan", "interest", "borrower","PAN","AADHAAR","Customer Name",
+        "tenure", "repayment", "lender", "apr",'penalty','gold loan',
+        'loan id']
 
     matches = sum(1 for k in required_keywords if k in text)
 
@@ -42,11 +42,11 @@ def build_final_prompt(user_instructions: str = "") -> str:
     """
     if user_instructions:
         return (
-            prompt1
+            SYSTEM_PROMPT
             + "\n\n### ADDITIONAL USER INSTRUCTIONS\n"
             + user_instructions.strip()
         )
-    return prompt1
+    return SYSTEM_PROMPT
 
 
 #llm parser (helper funck)
