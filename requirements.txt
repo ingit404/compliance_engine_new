@@ -8,4 +8,4 @@ openpyxl
 pymupdf
 regex
 google-cloud-storage
-gunicorn
+

@@ -9,6 +9,9 @@ from google import genai
 from google.genai import types
 from prompt import SYSTEM_PROMPT
 from dotenv import load_dotenv
+from google.genai import types
+from gcs_cache import read_cache_ids
+
 
 load_dotenv()
 
@@ -81,9 +84,18 @@ def run_llm_audit(
 
     client = genai.Client(api_key=api_key)
 
-    ground_truth_file = client.files.upload(file=ground_truth)
-    clm_file = client.files.upload(file=clm)
-    gl_file = client.files.upload(file=GL_regulation)
+    #cacheing
+    cache_ids=read_cache_ids()
+    if not cache_ids:
+        raise RuntimeError("Compliance caches not initialized")
+
+    # Caching handles via name strings
+    flash_cache_name = cache_ids["flash"]
+    pro_cache_name   = cache_ids["pro"]
+
+    # ground_truth_file = client.files.upload(file=ground_truth)
+    # clm_file = client.files.upload(file=clm)
+    # gl_file = client.files.upload(file=GL_regulation)
     target_file = client.files.upload(file=target_doc)
 
     model_2 = "gemini-3-flash-preview"
@@ -94,16 +106,28 @@ def run_llm_audit(
     #Model_2
     response_2 = client.models.generate_content(
         model=model_2,
-        contents=[ground_truth_file, clm_file, gl_file, target_file, final_prompt],
-        config=types.GenerateContentConfig(temperature=0.1)
+        contents=[
+            types.Part.from_uri(file_uri=target_file.uri, mime_type=target_file.mime_type),
+            types.Part(text=final_prompt)
+        ],
+        config=types.GenerateContentConfig(
+            cached_content=flash_cache_name,
+            temperature=0.1
+        )
     )
     data_2 = parse_model_output(response_2.text)
 
     #model_3
     response_3 = client.models.generate_content(
         model=model_3,
-        contents=[ground_truth_file, clm_file, gl_file, target_file, final_prompt],
-        config=types.GenerateContentConfig(temperature=0.1)
+        contents=[
+            types.Part.from_uri(file_uri=target_file.uri, mime_type=target_file.mime_type),
+            types.Part(text=final_prompt)
+        ],
+        config=types.GenerateContentConfig(
+            cached_content=pro_cache_name,
+            temperature=0.1
+        )
     )
     data_3 = parse_model_output(response_3.text)
 

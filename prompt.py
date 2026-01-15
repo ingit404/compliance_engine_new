@@ -55,7 +55,7 @@ Return an array of objects structured as follows:
 
   "whats_wrong": "concise_description_of the compliance issue found in the Target Document in the context of the Ground Truth with very specific details.Human auditors will use this to understand the problem quickly. in case of calculations for APR, Repayment schedule - pls show this as part of this field",
 
-  “priority”: ""String. Use P0, P1, P2, or P3 based on the severity definitions above."}
+  "priority": ""String. Use P0, P1, P2, or P3 based on the severity definitions above."}
 
 """
 
