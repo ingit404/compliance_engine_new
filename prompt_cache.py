@@ -9,7 +9,7 @@ load_dotenv()
 
 model_2 = "gemini-3-flash-preview"
 model_3 = "gemini-3-pro-preview"
-CACHE_TTL = "43200s"
+CACHE_TTL = "172800s" # 48 hours (max allowed)
 
 def init_compliance_caches(
     ground_truth: str,

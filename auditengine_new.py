@@ -11,6 +11,7 @@ from prompt import SYSTEM_PROMPT
 from dotenv import load_dotenv
 from google.genai import types
 from gcs_cache import read_cache_ids
+from prompt_cache import init_compliance_caches
 
 
 load_dotenv()
@@ -103,32 +104,45 @@ def run_llm_audit(
 
     final_prompt = build_final_prompt(user_prompt or "")
 
-    #Model_2
-    response_2 = client.models.generate_content(
-        model=model_2,
-        contents=[
-            types.Part.from_uri(file_uri=target_file.uri, mime_type=target_file.mime_type),
-            types.Part(text=final_prompt)
-        ],
-        config=types.GenerateContentConfig(
-            cached_content=flash_cache_name,
-            temperature=0.1
-        )
-    )
+    # Helpers for calling models with automatic cache refresh
+    def generate_with_retry(model_name, contents, cache_name):
+        try:
+            return client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    cached_content=cache_name,
+                    temperature=0.1
+                )
+            )
+        except Exception as e:
+            err_msg = str(e).lower()
+            if "403" in err_msg and ("cachedcontent not found" in err_msg or "permission_denied" in err_msg):
+                print(f"Cache {cache_name} expired. Refreshing...")
+                new_caches = init_compliance_caches(ground_truth, clm, GL_regulation)
+                # Update local cache handles
+                new_cache_name = new_caches["flash"] if "flash" in model_name else new_caches["pro"]
+                return client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        cached_content=new_cache_name,
+                        temperature=0.1
+                    )
+                )
+            raise e
+
+    # Model_2 (Flash)
+    contents_msg = [
+        types.Part.from_uri(file_uri=target_file.uri, mime_type=target_file.mime_type),
+        types.Part(text=final_prompt)
+    ]
+    
+    response_2 = generate_with_retry(model_2, contents_msg, flash_cache_name)
     data_2 = parse_model_output(response_2.text)
 
-    #model_3
-    response_3 = client.models.generate_content(
-        model=model_3,
-        contents=[
-            types.Part.from_uri(file_uri=target_file.uri, mime_type=target_file.mime_type),
-            types.Part(text=final_prompt)
-        ],
-        config=types.GenerateContentConfig(
-            cached_content=pro_cache_name,
-            temperature=0.1
-        )
-    )
+    # model_3 (Pro)
+    response_3 = generate_with_retry(model_3, contents_msg, pro_cache_name)
     data_3 = parse_model_output(response_3.text)
 
     #Merge results
