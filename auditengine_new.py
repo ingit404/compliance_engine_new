@@ -88,7 +88,8 @@ def run_llm_audit(
     #cacheing
     cache_ids=read_cache_ids()
     if not cache_ids:
-        raise RuntimeError("Compliance caches not initialized")
+        print("Compliance caches not found. Initializing...")
+        cache_ids = init_compliance_caches(ground_truth, clm, GL_regulation)
 
     # Caching handles via name strings
     flash_cache_name = cache_ids["flash"]
